@@ -34,6 +34,7 @@ class Config:
     routines: list[dict[str, Any]]
     db_path: Path
     admin_token: str | None = None
+    owner_login: str | None = None   # Tailscale login allowed to use the web app (env HT_OWNER_LOGIN)
     extra: dict[str, Any] = field(default_factory=dict)
 
     # convenience accessors -------------------------------------------------
@@ -80,6 +81,7 @@ def load_config(config_dir: str | os.PathLike | None = None, db_path: str | os.P
         routines=routines,
         db_path=dbp,
         admin_token=os.environ.get("HT_ADMIN_TOKEN") or None,
+        owner_login=(os.environ.get("HT_OWNER_LOGIN") or "").strip().lower() or None,
     )
 
 

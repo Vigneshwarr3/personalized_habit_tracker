@@ -115,7 +115,10 @@ CREATE TABLE IF NOT EXISTS pause_events (
 def connect(path: Path | str) -> sqlite3.Connection:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None)  # autocommit; explicit BEGIN when needed
+    # check_same_thread=False: FastAPI may open a request's connection (dependency) on one worker thread and run
+    # the endpoint on another; parallel requests then failed. Each connection is still used by one request at a time.
+    conn = sqlite3.connect(str(path), timeout=30, isolation_level=None,  # autocommit; explicit BEGIN when needed
+                           check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")

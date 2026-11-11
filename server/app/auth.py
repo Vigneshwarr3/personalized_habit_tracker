@@ -2,8 +2,12 @@
 
 * Admin token (env HT_ADMIN_TOKEN): dashboard + you; can call everything.
 * Device tokens (one per collector, stored as SHA-256 hashes): may only send heartbeats and read /status.
-Every client needs a token, including localhost: behind `tailscale serve` all traffic arrives from 127.0.0.1,
-so "trust localhost" would trust the whole tailnet.
+* The web app (in your browser) has no token. Behind `tailscale serve`, Tailscale stamps each request with the
+  sender's login (`Tailscale-User-Login`); requests stamped with the owner's login (env HT_OWNER_LOGIN) count as
+  admin, but only when the browser says the request came from the web app's own page (`Sec-Fetch-Site:
+  same-origin`). That stops other websites you visit from using your stamp (cross-site request forgery).
+Every client needs a token or the owner stamp, including localhost: behind `tailscale serve` all traffic arrives
+from 127.0.0.1, so "trust localhost" would trust the whole tailnet.
 """
 from __future__ import annotations
 
@@ -37,6 +41,15 @@ def authenticate(conn: sqlite3.Connection, admin_token: str | None, token: str |
     if row is None:
         return None
     return Principal("device", row["name"], row["source"])
+
+
+def authenticate_owner(owner_login: str | None, login: str | None, fetch_site: str | None) -> Principal | None:
+    """The web app: Tailscale login stamp == owner, sent from the app's own page (see module docstring)."""
+    if not owner_login or not login or (fetch_site or "").lower() != "same-origin":
+        return None
+    if not hmac.compare_digest(login.strip().lower().encode(), owner_login.encode()):
+        return None
+    return Principal("admin", source="web")
 
 
 def create_device(conn: sqlite3.Connection, name: str, source: str) -> str:

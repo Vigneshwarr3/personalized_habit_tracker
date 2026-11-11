@@ -12,7 +12,7 @@ from typing import Annotated, Iterator, Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field, field_validator
 
 from . import auth, categories as cat_svc, kpis, views
@@ -233,11 +233,14 @@ def create_app(cfg: Config | None = None, start_background: bool | None = None,
 
     Conn = Annotated[object, Depends(get_conn)]
 
-    def principal(conn: Conn, authorization: Annotated[str | None, Header()] = None) -> auth.Principal:
+    def principal(conn: Conn, authorization: Annotated[str | None, Header()] = None,
+                  tailscale_user_login: Annotated[str | None, Header()] = None,
+                  sec_fetch_site: Annotated[str | None, Header()] = None) -> auth.Principal:
         token = None
         if authorization and authorization.lower().startswith("bearer "):
             token = authorization[7:].strip()
-        p = auth.authenticate(conn, cfg.admin_token, token)
+        p = auth.authenticate(conn, cfg.admin_token, token) if token else \
+            auth.authenticate_owner(cfg.owner_login, tailscale_user_login, sec_fetch_site)
         if p is None:
             raise HTTPException(401, "missing or invalid token", headers={"WWW-Authenticate": "Bearer"})
         return p
@@ -674,6 +677,31 @@ def create_app(cfg: Config | None = None, start_background: bool | None = None,
         label = datetime.now(ZoneInfo(cfg.timezone)).strftime("%Y-%m-%d_%H%M%S")
         path = backup_now(cfg, label=label)
         return {"written": str(path) if path else None}
+
+    # ---- the web app (React build in web/dist), served at /ui/ ----------------------------------------
+    web_dir = Path(os.environ.get("HT_WEB_DIR") or (REPO_ROOT / "web" / "dist")).resolve()
+
+    @app.get("/ui", include_in_schema=False)
+    @app.get("/", include_in_schema=False)
+    def ui_redirect():
+        return RedirectResponse("/ui/")
+
+    @app.get("/ui/{path:path}", include_in_schema=False)
+    def ui(path: str):
+        """Static files of the web app; any other path is a page of the app, so it gets index.html.
+        No login needed here: the files hold no data; every data call is checked."""
+        index = web_dir / "index.html"
+        if not index.exists():
+            raise HTTPException(404, "web app not built (run: cd web && npm run build)")
+        f = (web_dir / path).resolve()
+        if path and f.is_file() and f.is_relative_to(web_dir):
+            # hashed build files never change; everything else is re-checked on each load
+            immutable = f.parent.name == "assets"
+            return FileResponse(f, headers={"Cache-Control": "public, max-age=31536000, immutable" if immutable
+                                            else "no-cache"})
+        if path.startswith("assets/") or path in ("sw.js", "manifest.webmanifest"):
+            raise HTTPException(404, "not found")  # a missing build file must not turn into index.html
+        return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
     return app
 

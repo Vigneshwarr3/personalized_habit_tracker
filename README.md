@@ -5,9 +5,10 @@ A personal activity tracker. It records what you do on your Mac (and later your 
 ```
 Mac agent (launchd) ──┐  HTTPS over Tailscale + per-device token
 Android (phase 3) ────┼─▶ https://your-server.your-tailnet.ts.net:8765   API (FastAPI + SQLite/WAL)
-Phone / Mac browser ──┴─▶ https://your-server.your-tailnet.ts.net:8501   dashboard (Streamlit + Plotly)
+Phone / Mac browser ──┴─▶ https://your-server.your-tailnet.ts.net:8765/ui/  web app (React, served by the API)
+                          https://your-server.your-tailnet.ts.net:8501       old dashboard (Streamlit, until every page has moved)
 
-server (Docker Compose, ~/habit-tracker):  api · dashboard · data/tracker.db · data/backups/
+server (Docker Compose, ~/habit-tracker):  api (+ web app) · dashboard · data/tracker.db · data/backups/
 ```
 
 Everything runs on your own machines and nothing goes to a cloud database. The ports are only reachable from your tailnet: they're published with `tailscale serve`, never with Funnel. The dashboard only answers your own Tailscale login.
@@ -229,6 +230,24 @@ To rebuild the app (the SDK was installed with Homebrew):
 - **Categories**: add, rename, recolor, archive, merge, unmerge. A rename keeps the old name as an alias, so YAML that uses it keeps working. A merge is a pointer that's resolved when data is read, so history is never rewritten.
 - **Privacy & devices**: pause tracking, hide or un-hide a date range, create or revoke device tokens, storage stats, back up now.
 
+## 4b. Web app (replacing the Streamlit dashboard)
+
+The dashboard is moving from Streamlit to a regular web app in `web/` (React + TypeScript, built with Vite, styled with Tailwind + shadcn/ui, charts with Plotly). The same code can later be packaged as a desktop app (Tauri: Windows, macOS) and a mobile app (Capacitor: Android, iOS, iPadOS). The API serves it at `https://your-server.your-tailnet.ts.net:8765/ui/`. All seven pages have moved (Overview, Corrections, Categories, Knowledge graph, Model, Privacy & devices, Settings); the Streamlit dashboard still runs at :8501 until the Android app switches over. Saved changes show a short confirmation; anything that can't be undone (revoking a device) asks for a second click.
+
+- **Opens instantly with your last data.** Each page first shows the data you saw last time (saved on the device, even after the app was closed), refreshes in the background, then swaps in the new data. A spinner next to the title means it's refreshing. Saved data older than 7 days is ignored.
+- **Offline.** If the server can't be reached, the page keeps showing the saved data with an *"Offline, showing data from 10:42"* banner and a **Try again** button. The app's own files are kept on the device too, so it opens without a connection.
+- **Error page.** Only when there's nothing saved to show: a plain message (can't reach the server / private / server problem / page problem), **Try again**, **Go to Overview**, and **Show details** for the technical error. Unknown addresses get a "Page not found" page.
+- **Sign-in.** No token in the browser. Behind `tailscale serve`, Tailscale stamps each request with your login; the API accepts the stamp only if it's the owner's (`HT_OWNER_LOGIN` in the server's `.env`) and only for requests made by the app's own page (`Sec-Fetch-Site: same-origin`), so other websites you visit can't use it. Device tokens work as before.
+
+**Develop** (Node 22):
+```bash
+cd web && npm install
+HT_DEV_LOGIN=you@example.com npm run dev   # proxies to a local API on 127.0.0.1:18765 (owner login set to the same value)
+HT_DEV_API=https://your-server.your-tailnet.ts.net:8765 npm run dev   # or: against the real server over Tailscale
+npm test && npm run typecheck && npm run build
+```
+`./deploy/deploy.sh` copies `web/` to the server; the Docker image builds it.
+
 ## 5. Editing the classifier (no code changes)
 
 On the server, edit `~/habit-tracker/server/config/*.yaml`, then run `docker compose -f deploy/docker-compose.yml restart api`. A bad YAML file makes startup fail with a clear message. To validate without restarting:
@@ -315,6 +334,7 @@ Add your own bank, insurer or apps to the lists and run `deploy.sh`. The Mac pic
 ```bash
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements-server.txt -r requirements-agent.txt
 .venv/bin/python -m pytest server/tests agent_mac/tests -q
+cd web && npm test     # web app: dates in the tracker's timezone (incl. DST), ranges, heatmap painting, pie grouping, the Corrections day table
 ```
 
 The tests use synthetic full-day heartbeat streams to cover:
@@ -327,6 +347,7 @@ The tests use synthetic full-day heartbeat streams to cover:
 - labels overriding routines, plus undo
 - hidden ranges
 - auth scopes and token revocation
+- web app sign-in: owner stamp accepted only from the app's own page (other sites, other logins, no stamp and bad tokens are refused); serving `/ui/` (no files outside the build); parallel requests
 - pause
 - batch de-duplication
 - backups never overwritten

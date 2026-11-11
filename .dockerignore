@@ -6,3 +6,5 @@ android
 **/__pycache__
 **/.pytest_cache
 *.db
+web/node_modules
+web/dist

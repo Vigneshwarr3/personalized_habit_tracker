@@ -13,8 +13,9 @@ echo "==> 1/6 copying code to $HOST:~/$DIR"
 ssh "$HOST" "mkdir -p ~/$DIR/data/backups"
 rsync -az --exclude '__pycache__' --exclude '.pytest_cache' --exclude '*.pyc' \
   server deploy requirements-server.txt "$HOST:$DIR/"
-# dashboard/ is pure code: mirror it exactly so renamed/removed pages don't linger (never used for data)
+# dashboard/ and web/ are pure code: mirror them exactly so renamed/removed files don't linger (never used for data)
 rsync -az --delete --exclude '__pycache__' dashboard/ "$HOST:$DIR/dashboard/"
+rsync -az --delete --exclude 'node_modules' --exclude 'dist' web/ "$HOST:$DIR/web/"
 
 APK="android/app/build/outputs/apk/debug/app-debug.apk"
 ssh "$HOST" "mkdir -p ~/$DIR/dist"
@@ -72,4 +73,5 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 curl -fsS "https://$TS_NAME:8765/health"; echo
 echo "    dashboard: $(curl -s -o /dev/null -w '%{http_code}' "https://$TS_NAME:8501/")"
-echo "done. Dashboard: https://$TS_NAME:8501"
+echo "    web app:   $(curl -s -o /dev/null -w '%{http_code}' "https://$TS_NAME:8765/ui/")"
+echo "done. Web app: https://$TS_NAME:8765/ui/   Dashboard (Streamlit, until every page has moved): https://$TS_NAME:8501"

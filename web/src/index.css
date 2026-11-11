@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+/* Light/dark follows the device setting (same as the old dashboard). */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* Graphite theme carried over from dashboard/.streamlit/config.toml */
+:root {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #1d2127;
+  --card: #ffffff;
+  --card-foreground: #1d2127;
+  --popover: #ffffff;
+  --popover-foreground: #1d2127;
+  --primary: #2f343b;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f5f7;
+  --secondary-foreground: #1d2127;
+  --muted: #f4f5f7;
+  --muted-foreground: #5c636d;
+  --accent: #eceef1;
+  --accent-foreground: #1d2127;
+  --destructive: #c0362c;
+  --warning: #fdf3dc;
+  --warning-foreground: #7a4b00;
+  --good: #1e7a46;
+  --bad: #c0362c;
+  --border: #e2e5e9;
+  --input: #d5d9df;
+  --ring: #2f343b;
+  --radius: 0.6rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #121417;
+    --foreground: #e6e8eb;
+    --card: #16191d;
+    --card-foreground: #e6e8eb;
+    --popover: #1c1f24;
+    --popover-foreground: #e6e8eb;
+    --primary: #d5d9df;
+    --primary-foreground: #121417;
+    --secondary: #1c1f24;
+    --secondary-foreground: #e6e8eb;
+    --muted: #1c1f24;
+    --muted-foreground: #9aa1ab;
+    --accent: #252931;
+    --accent-foreground: #e6e8eb;
+    --destructive: #f07a70;
+    --warning: #3a2e14;
+    --warning-foreground: #f3d28b;
+    --good: #5fd08f;
+    --bad: #f07a70;
+    --border: #2b2f36;
+    --input: #3a3f47;
+    --ring: #8a929d;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100dvh;
+  }
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
