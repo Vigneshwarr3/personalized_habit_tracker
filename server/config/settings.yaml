@@ -1,0 +1,240 @@
+# Habit Tracker server settings. Edit freely; restart the api container to apply.
+
+timezone: America/Indiana/Indianapolis   # used for days/hours on the dashboard; data is stored in UTC
+
+database:
+  path: data/tracker.db                  # relative to the repo root (a Docker volume on the server)
+
+classification:
+  window_minutes: 15
+  min_active_seconds: 60        # windows with less non-idle time than this stay blank
+  context_min_share: 0.10       # a context counts toward num_contexts if it uses >= 10% of the window
+  hour_cell: dominant           # heatmap hour = category with the most time among its 15-min windows
+  label_min_overlap: 0.5        # a correction applies to a window if it covers >= 50% of it
+
+ingest:
+  merge_gap_seconds: 20         # identical consecutive heartbeats closer than this are stored as one span
+  max_batch: 5000
+  max_future_skew_seconds: 300  # heartbeats stamped further in the future than this are rejected
+
+# Apps whose activity is split by website (context = app + domain).
+browsers:
+  - Google Chrome
+  - Safari
+  - Brave Browser
+  - Microsoft Edge
+  - Arc
+  - Firefox
+  - com.android.chrome
+  - com.brave.browser
+  - com.microsoft.emmx
+
+# Coarse signals that rules / knowledge graph / LLM may emit. Add new ones here.
+signals:
+  - education       # lectures, tutorials, courses, documentation, podcasts that teach
+  - coding          # IDEs, terminals, code hosting, dev docs
+  - notes           # note taking (GoodNotes, Notion, Obsidian ...)
+  - class           # live class / lecture platform
+  - coursework      # LMS / assignment submission (Canvas, Gradescope ...)
+  - jobs            # job search, ATS, careers pages
+  - scaler          # Scaler / InterviewBit
+  - entertainment   # movies, series, entertainment videos, games
+  - social          # social sites not covered below
+  - short_form      # feeds / short videos: Instagram, TikTok, Reels, YouTube Shorts, X, Reddit
+  - messaging       # chats and calls with people (WhatsApp, Messages, FaceTime ...)
+  - streaming       # movies & series (Netflix, Prime, ...)
+  - video_learning  # educational videos (YouTube lectures, tutorials, podcasts)
+  - reading_books   # e-books
+  - reading_papers  # research papers
+  - linkedin        # LinkedIn
+  - resume          # editing your résumé / CV
+  - meeting         # video calls not identified as class
+  - communication   # email, calendars
+  - admin           # bank, university admin, hospital, government, bills
+  - shopping
+  - food            # recipes, food delivery
+  - travel          # maps, flights, hotels
+  - fitness
+  - system          # macOS system apps: settings, Finder, Activity Monitor
+  - other
+  - unknown         # no rule matched; phase 2 resolves these via the knowledge graph / LLM
+
+# Short descriptions given to the LLM so it picks signals consistently.
+signal_descriptions:
+  education: learning material - lectures, tutorials, courses, explainers, educational podcasts, documentation
+  coding: programming, developer tools, code hosting, technical docs, self-hosted server admin
+  notes: note taking or reading/annotating notes
+  class: a live or recorded class session of a university course
+  coursework: university LMS or assignment/exam platforms
+  jobs: job search, job applications, recruiting, career pages, LinkedIn
+  scaler: Scaler Academy / InterviewBit
+  entertainment: movies, series, vlogs, music videos, comedy, gaming, sports highlights, memes
+  social: other social websites
+  short_form: social media feeds and short-form video (reels, shorts, TikTok, scrolling feeds)
+  messaging: chatting or calling with people (messages, WhatsApp, video calls with friends)
+  streaming: movies and TV series on streaming services
+  video_learning: educational videos - lectures, tutorials, explainers, talks, educational podcasts
+  reading_books: reading books / e-books
+  reading_papers: reading research papers or academic articles
+  linkedin: LinkedIn
+  resume: writing or editing a résumé or CV
+  meeting: video calls and meetings
+  communication: email, calendars, work chat
+  admin: banking, bills, university administration, hospital/health portals, government, taxes, visas
+  shopping: online shopping
+  food: recipes, cooking, food delivery
+  travel: maps, flights, hotels, rides, trip planning
+  fitness: workouts, sports training, health tracking
+  system: computer settings and file management
+  other: none of the above
+
+# Phase 2: knowledge graph + LLM for items the rules don't know (or know with low confidence).
+knowledge_graph:
+  enabled: true
+  min_rule_confidence: 0.6       # rule matches below this also go through the knowledge graph
+  semantic_threshold: 0.80       # cosine similarity of titles needed to reuse a stored classification
+  embedding_backend: fastembed   # fastembed (all-MiniLM-L6-v2, local ONNX) | hash (no model, tests only)
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  model_cache_dir: data/models
+  parent_min_evidence: 2         # a channel/site needs >= 2 classified items ...
+  parent_min_agreement: 0.8      # ... and >= 80% of them agreeing before new items inherit its signal
+  # Sites hosting every kind of content: new items never inherit from the whole site, only from a
+  # channel / sub-path (e.g. a YouTube channel, medium.com/<publication>, reddit.com/r/<sub>).
+  platform_domains: [youtube.com, youtu.be, medium.com, substack.com, reddit.com, x.com, twitter.com,
+                     instagram.com, tiktok.com, vimeo.com, twitch.tv, google.com, bing.com, duckduckgo.com,
+                     github.com, docs.google.com, drive.google.com, notion.so, wikipedia.org]
+  review_below: 0.6              # LLM answers below this confidence go to the review queue
+  # Pages that are NEVER sent to the LLM: search results, whose titles are your search words.
+  # Each search is its own item (by title); it is classified only locally (similar searches you labeled)
+  # and otherwise stays unknown. Format: domain glob [/ path prefix].
+  local_only_pages: [google.*/search, bing.com/search, duckduckgo.com, search.brave.com, search.yahoo.com,
+                     ecosia.org/search, startpage.com, youtube.com/results, amazon.*/s, google.*/maps/search]
+  youtube_channel_lookup: true   # asks youtube.com/oembed for a video's channel name (video id only)
+  worker_interval_seconds: 60
+  llm:
+    provider: openai_compatible
+    base_url: https://api.groq.com/openai/v1
+    model: openai/gpt-oss-20b    # models available to your key: GET https://api.groq.com/openai/v1/models
+    extra_params: {reasoning_effort: low}
+    api_key_env: GROQ_API_KEY
+    daily_budget: 200            # max LLM calls per local day; the rest wait in the queue
+    max_per_minute: 20
+    dry_run: false               # true = never call the LLM, just queue
+    timeout_seconds: 20
+
+# Phase 4: learned model on your labeled 15-min windows (LightGBM). Used only where it beats the routines.
+model:
+  enabled: true
+  min_labeled_windows: 300   # stays off until this many labeled windows (with activity data) exist
+  min_class_examples: 8      # categories with fewer labeled windows are left to the routines
+  min_support: 8             # held-out windows needed before trusting the comparison for a category
+  f1_margin: 0.02            # the model must beat the routines' F1 by this much to take over a category
+  min_probability: 0.5       # below this the routines' answer is kept
+  cv_folds: 4                # time-based folds: train on earlier days, test on later ones
+  train_hour_local: 4        # nightly retraining (only when your labels changed)
+  dir: data/models/window_model
+
+# Sensitive things: for these, only the app name / website DOMAIN is kept - no window title, no page path.
+# They never go to the knowledge graph or the LLM. Applied on the Mac BEFORE upload (the Mac agent downloads
+# these lists from the server) and again on the server for every collector. Patterns are case-insensitive
+# globs; a plain domain also matches its subdomains (chase.com matches secure.chase.com).
+privacy:
+  private_apps:          # macOS app names and Android package names
+    - "1Password*"
+    - Bitwarden
+    - KeePassXC
+    - KeePassium
+    - Keychain Access
+    - Passwords
+    - Dashlane
+    - LastPass
+    - Enpass
+    - NordPass
+    - Proton Pass
+    - "com.onepassword.*"
+    - com.x8bit.bitwarden
+    - "com.lastpass.*"
+    - com.dashlane
+    - proton.android.pass
+    - "*bank*"
+    - "*wallet*"
+    - "com.chase.*"
+    - com.infonow.bofa
+    - "com.wf.*"
+    - "com.paypal.*"
+    - com.venmo
+    - "com.robinhood.*"
+    - "com.capitalone.*"
+    - "com.discover.*"
+    - "com.americanexpress.*"
+  private_domains:
+    # banks, payments, investing, credit
+    - "*bank*"
+    - chase.com
+    - wellsfargo.com
+    - capitalone.com
+    - discover.com
+    - americanexpress.com
+    - citi.com
+    - usbank.com
+    - pnc.com
+    - ally.com
+    - sofi.com
+    - chime.com
+    - paypal.com
+    - venmo.com
+    - zellepay.com
+    - robinhood.com
+    - fidelity.com
+    - schwab.com
+    - vanguard.com
+    - etrade.com
+    - coinbase.com
+    - wise.com
+    - creditkarma.com
+    - experian.com
+    - equifax.com
+    - transunion.com
+    - onlinesbi.sbi
+    - sbi.co.in
+    - kotak.com
+    - paytm.com
+    - phonepe.com
+    # password managers, sign-in and account pages
+    - bitwarden.com
+    - 1password.com
+    - lastpass.com
+    - dashlane.com
+    - accounts.google.com
+    - myaccount.google.com
+    - passwords.google.com
+    - login.microsoftonline.com
+    - login.live.com
+    - account.microsoft.com
+    - appleid.apple.com
+    - account.apple.com
+    - iforgot.apple.com
+    - "login.*"
+    - "auth.*"
+    - "sso.*"
+    - "idp.*"
+    - "*.okta.com"
+    - duosecurity.com
+    # health, taxes, government
+    - "mychart.*"
+    - mychart.com
+    - irs.gov
+    - ssa.gov
+    - uscis.gov
+    - healthcare.gov
+  # Any page whose title matches this also loses its title and path (YouTube video titles are exempt).
+  private_title_regex: '\b(passwords?|passcodes?|passkeys?|sign[ -]?in|log[ -]?in|logon|one[- ]time (code|password)|otp|verification code|security code|2fa|two[- ]factor|mfa|account (number|ending)|routing number|credit card|debit card|card number|cvv|ssn|social security|bank statement|tax return)\b'
+
+auth:
+  # Every collector needs a device token (create with: python -m server.app.cli add-device <name>).
+  # The dashboard uses HT_ADMIN_TOKEN from the environment.
+  owner_login_env: HT_OWNER_LOGIN   # if set, the dashboard only serves this Tailscale login
+
+backup:
+  dir: data/backups
+  hour_local: 3                     # nightly backup time; backups are never deleted

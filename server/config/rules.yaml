@@ -1,0 +1,176 @@
+# Rules map ONE activity item (app / website / page) to a coarse SIGNAL (see settings.yaml -> signals).
+# They never mention categories; routines.yaml turns signal mixes into categories.
+#
+# Each rule may use any of these keys (all given keys must match; lists mean "any of"):
+#   app:          app name (macOS) or package name (Android), case-insensitive exact match
+#   domain:       website domain; also matches subdomains (linkedin.com matches www.linkedin.com)
+#   url_regex:    regex searched in the SANITIZED url (no query string, except youtube ?v=)
+#   title_regex:  regex searched in the window/page title (case-insensitive)
+#   confidence:   0..1, default 1.0. Items below 0.6 are re-checked by the knowledge graph (phase 2).
+# Rules are checked top to bottom; the FIRST match wins. Put specific rules above general ones.
+#
+# NOTE: there are deliberately no rules for "Negative Habits" / "Negative habits 2". Add your own.
+
+rules:
+  # ---------- Scaler ----------
+  - signal: scaler
+    domain: [scaler.com, interviewbit.com]
+
+  # ---------- Career: résumé editing, LinkedIn, other job sites ----------
+  - signal: resume
+    title_regex: '\b(resume|résumé|curriculum vitae)\b|\bCV\.(pdf|docx?)\b'
+  - signal: linkedin
+    domain: [linkedin.com]
+  - signal: linkedin
+    app: [com.linkedin.android]
+  - signal: jobs
+    domain: [greenhouse.io, lever.co, myworkdayjobs.com, myworkdaysite.com, workday.com,
+             smartrecruiters.com, icims.com, ashbyhq.com, jobvite.com, taleo.net, joinhandshake.com,
+             indeed.com, glassdoor.com, wellfound.com, simplify.jobs, jobright.ai, ziprecruiter.com,
+             successfactors.com, oraclecloud.com, eightfold.ai, dice.com, levels.fyi]
+  - signal: jobs
+    title_regex: '\b(careers?|job application|apply (now|for)|internship|job description|hiring)\b'
+  - signal: jobs
+    app: [com.indeed.android.jobsearch, com.glassdoor.app]
+
+  # ---------- Class / coursework ----------
+  - signal: class
+    domain: [kaltura.com, mediaspace.kaltura.com, echo360.org, echo360.com]
+  - signal: coursework
+    domain: [instructure.com, canvas.iu.edu, gradescope.com, piazza.com, overleaf.com, edstem.org]
+
+  # ---------- Your own server / self-hosted tools (you said: count as coding) ----------
+  - signal: coding
+    domain: [your-tailnet.ts.net, 100.x.y.z, server]
+  - signal: coding
+    title_regex: '\bPortainer\b'
+
+  # ---------- macOS system apps (you said: Daily activities, via the `system` signal) ----------
+  - signal: system
+    app: [System Settings, System Preferences, Finder, Activity Monitor, Disk Utility, Keychain Access,
+          Console, Software Update, Installer, App Store]
+
+  # ---------- Coding ----------
+  - signal: coding
+    app: [Code, Visual Studio Code, Cursor, PyCharm, IntelliJ IDEA, Xcode, Terminal, iTerm2, Warp,
+          Ghostty, Sublime Text, Zed, Android Studio, DataGrip, Postman, Docker Desktop, Jupyter]
+  - signal: coding
+    domain: [github.com, gitlab.com, stackoverflow.com, stackexchange.com, docs.python.org,
+             developer.mozilla.org, pypi.org, huggingface.co, kaggle.com, colab.research.google.com,
+             leetcode.com, hackerrank.com, neetcode.io, geeksforgeeks.org, readthedocs.io, localhost]
+
+  # ---------- Notes ----------
+  - signal: notes
+    app: [GoodNotes, Goodnotes, Notes, Notion, Obsidian, OneNote, Microsoft OneNote, Notability,
+          com.goodnotes.android, com.notion.id, md.obsidian]
+  - signal: notes
+    domain: [notion.so, notion.site, docs.google.com]
+
+  # ---------- Education (sites) ----------
+  - signal: education
+    domain: [coursera.org, udemy.com, edx.org, khanacademy.org, mit.edu, ocw.mit.edu, nptel.ac.in,
+             brilliant.org, datacamp.com, w3schools.com, deeplearning.ai, fast.ai,
+             freecodecamp.org, educative.io, wikipedia.org, chatgpt.com, chat.openai.com, claude.ai,
+             gemini.google.com, perplexity.ai]
+
+  # ---------- Reading ----------
+  - signal: reading_papers
+    domain: [arxiv.org, scholar.google.com, semanticscholar.org, researchgate.net, dl.acm.org, ieeexplore.ieee.org,
+             openreview.net, paperswithcode.com, sciencedirect.com, link.springer.com, nature.com, biorxiv.org,
+             pubmed.ncbi.nlm.nih.gov]
+  - signal: reading_books
+    app: [Kindle, Books, com.amazon.kindle, com.google.android.apps.books]
+  - signal: reading_books
+    domain: [read.amazon.com, gutenberg.org, oreilly.com]
+
+  # ---------- Short-form video (counted as short-form by address / app) ----------
+  - signal: short_form
+    domain: [youtube.com]
+    url_regex: '/shorts/'
+  - signal: short_form
+    domain: [instagram.com]
+    url_regex: '/reels?/'
+
+  # ---------- YouTube: learning vs entertainment by TITLE ----------
+  - signal: video_learning
+    domain: [youtube.com, youtu.be]
+    title_regex: '\b(lecture|lec \d+|tutorial|course|lesson|explained|how to|podcast|crash course|intro(duction)? to|masterclass|full course|walkthrough|lecture notes|MIT ?OCW|Stanford|NPTEL|freeCodeCamp|CS ?\d{2,3}|DSA|data structures?|algorithms?|machine learning|deep learning|neural networks?|statistics|calculus|linear algebra|system design|interview prep|python|java|sql|leetcode)\b'
+  - signal: entertainment
+    domain: [youtube.com, youtu.be]
+    url_regex: '/(watch|shorts)'
+    confidence: 0.5           # unclear YouTube videos get a second look in phase 2
+  - signal: entertainment
+    app: [com.google.android.youtube]
+    confidence: 0.5
+
+  # ---------- Movies & series (streaming) and other entertainment ----------
+  - signal: streaming
+    domain: [netflix.com, primevideo.com, hotstar.com, disneyplus.com, hulu.com, max.com, crunchyroll.com,
+             jiocinema.com, sonyliv.com, zee5.com, peacocktv.com, paramountplus.com, tv.apple.com]
+  - signal: streaming
+    app: [TV, IINA, VLC, Infuse, com.netflix.mediaclient, in.startv.hotstar, com.amazon.avod.thirdpartyclient,
+          com.disney.disneyplus, com.hulu.plus]
+  - signal: entertainment
+    domain: [twitch.tv, 9gag.com, imdb.com]
+  - signal: entertainment
+    app: [Spotify, Music, Steam, com.spotify.music]
+
+  # ---------- Messaging & calls (Friends/Family) vs feeds (short-form / social media) ----------
+  - signal: messaging
+    domain: [web.whatsapp.com, discord.com, web.telegram.org, messenger.com]
+  - signal: messaging
+    app: [WhatsApp, Messages, Telegram, Discord, Messenger, FaceTime, Signal, com.whatsapp, org.telegram.messenger,
+          com.discord, com.google.android.apps.messaging, com.facebook.orca, org.thoughtcrime.securesms]
+  - signal: short_form
+    domain: [instagram.com, facebook.com, x.com, twitter.com, reddit.com, snapchat.com, threads.net, tiktok.com]
+  - signal: short_form
+    app: [com.instagram.android, com.snapchat.android, com.reddit.frontpage, com.twitter.android,
+          com.zhiliaoapp.musically, com.facebook.katana, com.instagram.barcelona]
+  - signal: meeting
+    app: [zoom.us, Microsoft Teams, Webex, us.zoom.videomeetings, com.microsoft.teams]
+  - signal: meeting
+    domain: [meet.google.com, zoom.us, teams.microsoft.com]
+  - signal: communication
+    domain: [mail.google.com, outlook.office.com, outlook.live.com, calendar.google.com]
+  - signal: communication
+    app: [Mail, Outlook, Microsoft Outlook, Calendar, Slack, com.google.android.gm, com.Slack]
+
+  # ---------- Admin: bank / university / hospital / government ----------
+  - signal: admin
+    domain: [one.iu.edu, studentcenter.iu.edu, bursar.iu.edu, chase.com, bankofamerica.com,
+             wellsfargo.com, capitalone.com, discover.com, americanexpress.com, irs.gov, uscis.gov,
+             ssa.gov, mychart.com, iuhealth.org]
+
+  # ---------- Android apps (the phone sends package names only) ----------
+  - signal: education
+    app: [com.duolingo, org.coursera.android, com.udemy.android, org.khanacademy.android, com.quizlet.quizletandroid,
+          com.openai.chatgpt, com.anthropic.claude, ai.perplexity.app.android, com.google.android.apps.bard]
+  - signal: coursework
+    app: [com.instructure.candroid, com.google.android.apps.classroom]
+  - signal: notes
+    app: [com.google.android.keep, com.microsoft.office.onenote, com.google.android.apps.docs.editors.docs]
+  - signal: communication
+    app: [com.google.android.calendar, com.microsoft.office.outlook]
+  - signal: entertainment
+    app: [com.google.android.apps.youtube.music]
+  - signal: admin
+    app: [com.chase.sig.android, com.infonow.bofa, com.wf.wellsfargomobile, com.google.android.apps.walletnfcrel]
+  - signal: system
+    app: [com.android.settings, com.google.android.apps.nexuslauncher, com.sec.android.app.launcher,
+          com.android.systemui, com.google.android.permissioncontroller, com.google.android.documentsui,
+          com.tailscale.ipn, com.habittracker.collector]
+
+  # ---------- Shopping / food / travel / fitness ----------
+  - signal: shopping
+    domain: [amazon.com, amazon.in, flipkart.com, walmart.com, target.com, ebay.com, bestbuy.com, costco.com]
+  - signal: food
+    domain: [doordash.com, ubereats.com, grubhub.com, swiggy.com, zomato.com, instacart.com, allrecipes.com]
+  - signal: travel
+    domain: [maps.google.com, airbnb.com, booking.com, expedia.com, kayak.com,
+             united.com, delta.com, aa.com, southwest.com, makemytrip.com, uber.com, lyft.com]
+  - signal: travel
+    url_regex: 'google\.[a-z.]+/maps'
+  - signal: travel
+    app: [Maps, com.google.android.apps.maps, com.ubercab, me.lyft.android]
+  - signal: fitness
+    app: [com.strava, com.google.android.apps.fitness, com.nike.ntc]

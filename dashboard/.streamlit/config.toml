@@ -1,0 +1,34 @@
+# Dashboard look: Inter font, graphite accent, follows the device's light/dark setting.
+[theme]
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+headingFontSizes = ["1.9rem", "1.35rem", "1.1rem"]
+baseRadius = "0.6rem"
+buttonRadius = "0.6rem"
+showWidgetBorder = true
+
+[theme.light]
+primaryColor = "#2F343B"
+linkColor = "#2F343B"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F5F7"
+textColor = "#1D2127"
+borderColor = "#E2E5E9"
+codeTextColor = "#3A3F47"
+codeBackgroundColor = "#F1F2F4"
+
+[theme.dark]
+primaryColor = "#8A929D"
+linkColor = "#D5D9DF"
+backgroundColor = "#121417"
+secondaryBackgroundColor = "#1C1F24"
+textColor = "#E6E8EB"
+borderColor = "#2B2F36"
+codeTextColor = "#C9CDD3"
+codeBackgroundColor = "#22262C"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

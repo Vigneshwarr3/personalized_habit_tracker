@@ -1,0 +1,20 @@
+# Seed categories. Only used to create the categories the FIRST time the database is set up.
+# After that, manage categories from the dashboard (Categories page) or the /categories API.
+categories:
+  - {id: 1,  name: "Class",                            color: "#3D5329"}
+  - {id: 2,  name: "Assignments",                      color: "#4FAE5E"}
+  - {id: 3,  name: "Internships/Linkedin",             color: "#6E98D2"}
+  - {id: 4,  name: "Learning for Assignments",         color: "#FFFF55"}
+  - {id: 5,  name: "Movies/YT/Talking with friends",   color: "#F4C242"}
+  - {id: 6,  name: "Cooking, Eating & Chores",         color: "#FCF0CF"}
+  - {id: 7,  name: "General Learning",                 color: "#A5A5A5"}
+  - {id: 8,  name: "Travel/Visiting places",           color: "#777777"}
+  - {id: 9,  name: "Exercise",                         color: "#9ACD5D"}
+  - {id: 10, name: "Sleep",                            color: "#4EA9E8"}
+  - {id: 11, name: "Scaler",                           color: "#0B1F5C"}
+  - {id: 12, name: "Daily activities",                 color: "#E6E6E6"}
+  - {id: 13, name: "Party/Event/Outing/Networking",    color: "#F9D878"}
+  - {id: 14, name: "Being Unproductive",               color: "#DCE0F0"}
+  - {id: 15, name: "Negative Habits",                  color: "#E8352A"}
+  - {id: 16, name: "Negative habits 2",                color: "#A9231B"}
+  - {id: 17, name: "Bank/University/Hospital/Others",  color: "#8FAADC"}

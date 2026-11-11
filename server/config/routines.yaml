@@ -1,0 +1,92 @@
+# Routines turn a 15-minute window's SIGNAL MIX + context features into a CATEGORY.
+# Checked top to bottom; the FIRST routine whose conditions all hold wins.
+# Categories are referenced by NAME. Renames and merges are followed automatically
+# (old names keep working), so you don't have to edit this file after renaming in the dashboard.
+#
+# Condition syntax: "<expr> <op> <number>", where <op> is one of >= <= > < ==
+# and <expr> is one feature or several joined with "+". Available features:
+#   active_minutes          non-idle minutes in the window (0-15)
+#   idle_ratio              1 - active/window
+#   num_contexts            contexts (app, or browser+domain) using >= 10% of the window
+#   largest_context_share   share of the single biggest context (0-1)
+#   switch_rate             context switches per active minute
+#   media_share             share of active time where media played with no keyboard/mouse input
+#   run_minutes             how long the window's biggest context has run without a break (minutes, can span windows)
+#   signals.<name>          share of the window's time with that signal (0-1); see settings.yaml -> signals
+#
+#   when:     [cond, cond, ...]   -> ALL must hold
+#   when_any: [cond, cond, ...]   -> at least ONE must hold (optional; combined with `when`)
+#
+# NOTE: no routines for "Negative Habits" / "Negative habits 2" — define your own.
+# Windows that match nothing are shown as "Unclassified" until you label them.
+
+routines:
+  # ---- Career
+  - name: Editing résumé
+    category: Career › Editing resume
+    when: ["signals.resume >= 0.4"]
+  - name: LinkedIn
+    category: Career › LinkedIn
+    when: ["signals.linkedin >= 0.4"]
+  - name: Company careers pages / applications
+    category: Career › Company careers pages
+    when: ["signals.jobs + signals.linkedin >= 0.4"]
+
+  # ---- Learning
+  - name: Scaler
+    category: Learning › Scaler website
+    when: ["signals.scaler >= 0.4"]
+  - name: Educational videos
+    category: Learning › YT videos
+    when: ["signals.video_learning >= 0.5"]
+  - name: Reading research papers
+    category: Learning › Reading research papers
+    when: ["signals.reading_papers >= 0.5"]
+  - name: Reading books
+    category: Learning › Reading books
+    when: ["signals.reading_books >= 0.5"]
+  - name: Coding (tag project time as Project › Coding yourself)
+    category: Learning › Coding
+    when: ["signals.coding >= 0.6"]
+  - name: General learning (several tools together)
+    category: Learning › General learning
+    when: ["num_contexts >= 2", "signals.education + signals.coding + signals.notes + signals.video_learning + signals.reading_papers + signals.reading_books + signals.class + signals.coursework >= 0.6"]
+  - name: General learning (one focused tool)
+    category: Learning › General learning
+    when: ["signals.education + signals.notes + signals.class + signals.coursework >= 0.6"]
+
+  # ---- Watching / social (binge watching and doom scrolling are decided per session: see Settings)
+  - name: Movies & series
+    category: Watching › Movies & series
+    when: ["signals.streaming >= 0.5"]
+  - name: Social media / short-form video
+    category: Unproductive › Social media
+    when: ["signals.short_form >= 0.5"]
+  - name: YouTube and other videos
+    category: Watching › Random YT videos
+    when: ["signals.entertainment >= 0.5"]
+  - name: Talking with people
+    category: Friends/Family › Talking
+    when: ["signals.messaging >= 0.5"]
+  - name: Mixed watching and scrolling
+    category: Watching › Random YT videos
+    when: ["signals.entertainment + signals.streaming + signals.short_form + signals.social >= 0.6"]
+
+  # ---- Everyday
+  - name: Bank / university / hospital admin
+    category: Everyday activities › Bank/Hospital/Others
+    when: ["signals.admin >= 0.5"]
+  - name: Online shopping
+    category: Everyday activities › Shopping
+    when: ["signals.shopping >= 0.5"]
+  - name: Food orders / recipes
+    category: Everyday activities › Eating
+    when: ["signals.food >= 0.5"]
+  - name: Computer housekeeping (settings, Finder)
+    category: Daily activities
+    when: ["signals.system >= 0.5"]
+
+  # ---- Exercise
+  - name: Fitness apps
+    category: Exercise
+    when: ["signals.fitness >= 0.5"]
