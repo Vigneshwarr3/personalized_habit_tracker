@@ -9,9 +9,8 @@ class Prefs(ctx: Context) {
     var serverUrl: String
         get() = sp.getString("server_url", DEFAULT_API) ?: DEFAULT_API
         set(v) = sp.edit().putString("server_url", v.trim().trimEnd('/')).apply()
-    var dashboardUrl: String
-        get() = sp.getString("dashboard_url", DEFAULT_DASHBOARD) ?: DEFAULT_DASHBOARD
-        set(v) = sp.edit().putString("dashboard_url", v.trim()).apply()
+    /** The web app is served by the API itself, so its address follows the server URL (no separate setting). */
+    val dashboardUrl: String get() = dashboardUrlFor(serverUrl)
     var token: String
         get() = sp.getString("token", "") ?: ""
         set(v) = sp.edit().putString("token", v.trim()).apply()
@@ -58,6 +57,8 @@ class Prefs(ctx: Context) {
 
     companion object {
         const val DEFAULT_API = "https://your-server.your-tailnet.ts.net:8765"
-        const val DEFAULT_DASHBOARD = "https://your-server.your-tailnet.ts.net:8501"
+
+        /** "https://host:8765" -> "https://host:8765/ui/" */
+        fun dashboardUrlFor(serverUrl: String): String = serverUrl.trim().trimEnd('/') + "/ui/"
     }
 }

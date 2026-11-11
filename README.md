@@ -6,12 +6,11 @@ A personal activity tracker. It records what you do on your Mac (and later your 
 Mac agent (launchd) ──┐  HTTPS over Tailscale + per-device token
 Android (phase 3) ────┼─▶ https://your-server.your-tailnet.ts.net:8765   API (FastAPI + SQLite/WAL)
 Phone / Mac browser ──┴─▶ https://your-server.your-tailnet.ts.net:8765/ui/  web app (React, served by the API)
-                          https://your-server.your-tailnet.ts.net:8501       old dashboard (Streamlit, until every page has moved)
 
-server (Docker Compose, ~/habit-tracker):  api (+ web app) · dashboard · data/tracker.db · data/backups/
+server (Docker Compose, ~/habit-tracker):  api (+ web app) · data/tracker.db · data/backups/
 ```
 
-Everything runs on your own machines and nothing goes to a cloud database. The ports are only reachable from your tailnet: they're published with `tailscale serve`, never with Funnel. The dashboard only answers your own Tailscale login.
+Everything runs on your own machines and nothing goes to a cloud database. The ports are only reachable from your tailnet: they're published with `tailscale serve`, never with Funnel. The web app only answers your own Tailscale login.
 
 ---
 
@@ -80,9 +79,9 @@ ssh -t user@100.x.y.z 'sudo usermod -aG docker user && sudo tailscale set --oper
 The script:
 1. Copies the code to `~/habit-tracker`.
 2. Creates `~/habit-tracker/.env` once (mode 600) with a random `HT_ADMIN_TOKEN`, your Tailscale login, and `GROQ_API_KEY` copied from the local `.env`.
-3. Builds and starts both containers.
+3. Builds the image (including the web app) and starts the API container.
 4. Runs the test suite inside the container.
-5. Sets up `tailscale serve` on :8765 and :8501.
+5. Sets up `tailscale serve` on :8765. The old dashboard addresses (:8501, and http :8051) point to the same app, so old links and home-screen shortcuts keep working.
 6. Checks `/health` from this Mac over the tailnet.
 
 It never touches `data/` and never deletes files on the server.
@@ -93,7 +92,7 @@ It never touches `data/` and never deletes files on the server.
 ssh user@100.x.y.z 'cd habit-tracker && docker compose -f deploy/docker-compose.yml exec api python -m server.app.cli add-device macbook-air mac'
 ```
 
-You can also create tokens in the dashboard under **Privacy & devices → Create token**.
+You can also create tokens in the web app under **Privacy & devices → Create token**.
 
 ## 2. Mac agent
 
@@ -146,14 +145,15 @@ In those cases the time counts as **active** and is flagged `media` (watching a 
 ## 3. Phone dashboard
 
 1. Install **Tailscale** on Android and log in with the same account.
-2. Open `https://your-server.your-tailnet.ts.net:8501` and choose **Add to Home screen**.
+2. Open `https://your-server.your-tailnet.ts.net:8765/ui/` and choose **Add to Home screen**. (Or use the Android app, which opens the same page.)
 
-Dashboard addresses (all tailnet-only, all served by `tailscale serve`, all with the owner check):
+Web app addresses (all tailnet-only, all served by `tailscale serve`, all with the owner check):
 
 | URL | Notes |
 |---|---|
-| `https://your-server.your-tailnet.ts.net:8501` | Recommended (HTTPS, best for "Add to Home screen") |
-| `http://server:8051` | Short version. Plain HTTP, but Tailscale already encrypts the traffic. |
+| `https://your-server.your-tailnet.ts.net:8765/ui/` | Recommended (HTTPS: needed to open offline and remember your data) |
+| `https://your-server.your-tailnet.ts.net:8501` | The old dashboard address; opens the same app |
+| `http://server:8051` | Short version. Plain HTTP (Tailscale still encrypts the traffic), but browsers won't keep the app for offline use there. |
 | ~~`100.x.y.z:…`~~ | Doesn't work. The certificate is for the name, and `tailscale serve` routes by hostname. Exposing the container on the IP directly would skip the owner check. |
 
 The layout adapts to the phone: the heatmap comes first and the pie chart sits underneath.
@@ -168,14 +168,14 @@ The app records **which app is in front and for how long**, as package names onl
 
 **Install (one time):**
 1. Install **Tailscale** from the Play Store and log in with the same account.
-2. On the phone, open `https://your-server.your-tailnet.ts.net:8501` → **Privacy & devices**:
+2. On the phone, open `https://your-server.your-tailnet.ts.net:8765/ui/privacy` (**Privacy & devices**):
    - Tap **Download the Android app**, and allow your browser to install unknown apps.
    - Create a token: name it `pixel-7a`, type `android`, and **copy** it.
 3. Open **Habit Tracker** → Settings:
    1. **Grant usage access** and turn on Habit Tracker.
-   2. Paste the token, set the device name to `pixel-7a`, then tap **Save**.
+   2. Enter the Server API address (`https://your-server.your-tailnet.ts.net:8765`), paste the token, set the device name to `pixel-7a`, then tap **Save**. The dashboard opens from the same address (at `/ui/`).
    - **Is the switch greyed out ("Restricted setting")?** Android blocks it for apps installed from a browser. Tap **Open app info** in the app's settings → ⋮ (top right) → **Allow restricted settings** → confirm with your PIN or fingerprint. Then go back and turn on usage access.
-4. The app's home screen *is* the dashboard. Use the menu → **Settings & sync** for status: last sync, waiting uploads, and the last problem.
+4. The app's home screen *is* the dashboard (app 1.6+: the web app). It opens straight away with your last data and refreshes when the server answers; "Can't reach your server" only shows when nothing was ever loaded. Use the menu → **App settings & sync** for status: last sync, waiting uploads, and the last problem.
 
 **Updating the app**:
 1. Bump `versionCode` in `android/app/build.gradle.kts`, build, and run `./deploy/deploy.sh`.
@@ -186,7 +186,7 @@ Your settings and token are kept across updates, as long as the APK is built on 
 
 To rebuild the app (the SDK was installed with Homebrew):
 `cd android && JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ./gradlew testDebugUnitTest assembleDebug`.
-`./deploy/deploy.sh` publishes the new APK on the dashboard.
+`./deploy/deploy.sh` publishes the new APK (Privacy & devices offers it for download, and the app's **Check for update** finds it).
 
 **Location (app 1.4+)**: one low-power fix every ~15 min, plus one when Android notices you've stopped after a ride.
 - The fix is rounded to about 100 m **on the phone** before it's stored or sent. Precision is set in Settings → Location.
@@ -218,9 +218,9 @@ To rebuild the app (the SDK was installed with Homebrew):
 - **Sessions** (Settings): watching for 2 h or more in one go counts as Unproductive › Binge watching. Social media or short videos for 30 min or more in one go count as Doom scrolling. The whole session counts, and labels always win.
 - **Places** (Corrections → Places this day): name a place and choose what time there counts as. Places with the same name share the tag. **Open in OpenStreetMap** shows the spot. **Suggest a name** asks OpenStreetMap, sending only that place's rounded coordinates, and only when you press it.
 
-**Look**: the Inter font, a graphite accent, and light/dark following your device, all set in `dashboard/.streamlit/config.toml`. In browsers the page links sit on the right of the header. In the Android app they're under ☰, together with **App settings & sync**.
+**Look**: the Inter font, a graphite accent, and light/dark following your device, set as color tokens in `web/src/index.css`. On wide screens the page links sit on the right of the header; on phones they're under ☰. In the Android app they're under ☰, together with **App settings & sync**.
 
-- **Home**: hour × day heatmap (rows are hours, columns are dates, each cell is the category that took most of that hour; hover for the 15-min breakdown), plus a pie chart with "N Hours of Category, X%" labels.
+- **Overview**: hour × day heatmap (rows are hours, columns are dates, each cell is the category that took most of that hour; hover for the 15-min breakdown), plus a pie chart with "N Hours of Category, X%" labels.
 - **Filling in time** (three ways, all saved as labels that override tracking):
   - **Paint** on the Overview heatmap: drag a box over hours (Mac) or tap an hour (phone), pick a category, and press **Paint**.
   - The Corrections **Day table** lists all 96 blocks of the day, including empty ones. Tick several rows and **Apply** one category.
@@ -230,12 +230,13 @@ To rebuild the app (the SDK was installed with Homebrew):
 - **Categories**: add, rename, recolor, archive, merge, unmerge. A rename keeps the old name as an alias, so YAML that uses it keeps working. A merge is a pointer that's resolved when data is read, so history is never rewritten.
 - **Privacy & devices**: pause tracking, hide or un-hide a date range, create or revoke device tokens, storage stats, back up now.
 
-## 4b. Web app (replacing the Streamlit dashboard)
+## 4b. Web app
 
-The dashboard is moving from Streamlit to a regular web app in `web/` (React + TypeScript, built with Vite, styled with Tailwind + shadcn/ui, charts with Plotly). The same code can later be packaged as a desktop app (Tauri: Windows, macOS) and a mobile app (Capacitor: Android, iOS, iPadOS). The API serves it at `https://your-server.your-tailnet.ts.net:8765/ui/`. All seven pages have moved (Overview, Corrections, Categories, Knowledge graph, Model, Privacy & devices, Settings); the Streamlit dashboard still runs at :8501 until the Android app switches over. Saved changes show a short confirmation; anything that can't be undone (revoking a device) asks for a second click.
+The dashboard is a regular web app in `web/` (React + TypeScript, built with Vite, styled with Tailwind + shadcn/ui, charts with Plotly). It replaced the earlier Streamlit dashboard (still in git history). The same code can later be packaged as a desktop app (Tauri: Windows, macOS) and a mobile app (Capacitor: Android, iOS, iPadOS). The API serves it at `https://your-server.your-tailnet.ts.net:8765/ui/`. Pages: Overview, Corrections, Categories, Knowledge graph, Model, Privacy & devices, Settings. Saved changes show a short confirmation; anything that can't be undone (revoking a device) asks for a second click.
 
 - **Opens instantly with your last data.** Each page first shows the data you saw last time (saved on the device, even after the app was closed), refreshes in the background, then swaps in the new data. A spinner next to the title means it's refreshing. Saved data older than 7 days is ignored.
 - **Offline.** If the server can't be reached, the page keeps showing the saved data with an *"Offline, showing data from 10:42"* banner and a **Try again** button. The app's own files are kept on the device too, so it opens without a connection.
+- **New versions.** After a deploy, an app that's already open moves to the new version by itself when you switch pages or come back to it (it reloads once). The build time is shown under **Show details** on the error page.
 - **Error page.** Only when there's nothing saved to show: a plain message (can't reach the server / private / server problem / page problem), **Try again**, **Go to Overview**, and **Show details** for the technical error. Unknown addresses get a "Page not found" page.
 - **Sign-in.** No token in the browser. Behind `tailscale serve`, Tailscale stamps each request with your login; the API accepts the stamp only if it's the owner's (`HT_OWNER_LOGIN` in the server's `.env`) and only for requests made by the app's own page (`Sec-Fetch-Site: same-origin`), so other websites you visit can't use it. Device tokens work as before.
 
@@ -373,7 +374,7 @@ The tests use synthetic full-day heartbeat streams to cover:
 - **Timestamps** are stored in UTC and shown in `America/Indiana/Indianapolis` (`settings.yaml → timezone`).
 - **Display-awake or audio-playing assertions** count as "media playing", so music while you're away from the keyboard counts as active time. Add players to `ignore_assertion_processes` if you'd rather not count that.
 - **Mac offline buffer** is capped at 500 MB (months of data). If it fills up, collection stops; existing data is never dropped.
-- **Server ports**: containers bind to `127.0.0.1:18765` and `127.0.0.1:18501`, and `tailscale serve` publishes them on the tailnet as :8765 and :8501. On this Mac, `127.0.0.1:8765` is already used by another project, which doesn't matter because the agent talks to the server.
+- **Server ports**: the API container binds to `127.0.0.1:18765`, and `tailscale serve` publishes it on the tailnet as :8765 (plus the old dashboard addresses :8501 and http :8051). On this Mac, `127.0.0.1:8765` is already used by another project, which doesn't matter because the agent talks to the server.
 - **Rule seeds** (job boards, learning sites, apps) are a starting point and can be edited in YAML. Zoom/Teams map to the `meeting` signal, which no routine uses yet because a meeting could be a class or a chat with friends. Label those windows, or add a routine.
 - **Knowledge graph scope**: only items with no rule match, or a rule confidence below 0.6, go through the graph. Items the rules already know aren't stored there unless you correct them.
 - **YouTube channel names** come from YouTube's public oEmbed endpoint, which receives only the video id. Turn this off with `youtube_channel_lookup: false`; without it, videos use title similarity and the LLM.

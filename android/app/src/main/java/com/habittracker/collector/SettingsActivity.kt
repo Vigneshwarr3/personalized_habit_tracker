@@ -48,7 +48,6 @@ class SettingsActivity : Activity() {
 
         status = TextView(this).apply { setPadding(0, pad / 2, 0, pad) }
         val api = field(prefs.serverUrl, "https://your-server.your-tailnet.ts.net:8765")
-        val dash = field(prefs.dashboardUrl, "https://your-server.your-tailnet.ts.net:8501")
         val device = field(prefs.device, "android-phone")
         val token = field(prefs.token, "ht_… (Dashboard → Privacy & devices → Create token)", secret = true)
 
@@ -84,13 +83,11 @@ class SettingsActivity : Activity() {
         col.addView(button("Save current location as Home") { savePlace("home") })
         col.addView(button("Save current location as Work") { savePlace("work") })
 
-        col.addView(label("Server API")); col.addView(api)
-        col.addView(label("Dashboard")); col.addView(dash)
+        col.addView(label("Server API (the dashboard opens from the same address, at /ui/)")); col.addView(api)
         col.addView(label("Device name (must match the token)")); col.addView(device)
         col.addView(label("Device token")); col.addView(token)
         col.addView(button("2. Save") {
             prefs.serverUrl = api.text.toString()
-            prefs.dashboardUrl = dash.text.toString()
             prefs.device = device.text.toString()
             prefs.token = token.text.toString()
             if (prefs.cursorMs == 0L) prefs.cursorMs = System.currentTimeMillis()  // record from now on

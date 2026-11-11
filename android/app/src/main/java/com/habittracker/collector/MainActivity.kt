@@ -18,8 +18,6 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import java.net.HttpURLConnection
-import java.net.URL
 
 /** Keeps content clear of the status/navigation bars (Android 15+ draws apps edge to edge). */
 fun View.padForSystemBars() {
@@ -37,9 +35,10 @@ fun View.padForSystemBars() {
 }
 
 /**
- * Home screen = the dashboard. Before showing it we wait (up to 20 s) until the server answers: after the phone
- * was idle, Tailscale needs a few seconds to reconnect, and the dashboard would otherwise flash
- * "Are you connected to the internet?". The page menu (☰) comes from the dashboard itself.
+ * Home screen = the dashboard (the web app at <server>/ui/). It opens right away: the web app keeps its own files
+ * and your last data on the phone, shows them at once and refreshes when the server answers (Tailscale may need a
+ * few seconds to reconnect after the phone was idle). The "Can't reach your server" screen only appears when the
+ * page itself can't load (first start with no connection). The page menu (☰) comes from the dashboard itself.
  */
 class MainActivity : Activity() {
     private lateinit var prefs: Prefs
@@ -48,8 +47,6 @@ class MainActivity : Activity() {
     private lateinit var message: TextView
     private lateinit var spinner: ProgressBar
     private lateinit var retry: Button
-    private var pausedAt = 0L
-    @Volatile private var attempt = 0
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,8 +57,8 @@ class MainActivity : Activity() {
         val pad = (24 * resources.displayMetrics.density).toInt()
 
         web = WebView(this).apply {
-            settings.javaScriptEnabled = true      // the dashboard needs JS + websockets
-            settings.domStorageEnabled = true
+            settings.javaScriptEnabled = true      // the dashboard is a JavaScript app
+            settings.domStorageEnabled = true      // it saves your last data on the phone
             settings.userAgentString = settings.userAgentString + " HabitTrackerApp/" + Updater.installedName(context)
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -78,11 +75,11 @@ class MainActivity : Activity() {
                 override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) = Unit
 
                 override fun onPageFinished(view: WebView, url: String?) {
-                    connectingView.visibility = View.GONE
+                    if (!failed) connectingView.visibility = View.GONE
                 }
 
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                    if (request.isForMainFrame) showProblem("Can't reach your server (${error.description}).")
+                    if (request.isForMainFrame) { failed = true; showProblem("Can't reach your server (${error.description}).") }
                 }
             }
         }
@@ -125,30 +122,16 @@ class MainActivity : Activity() {
         val c = a.getColor(0, 0xFFFFFFFF.toInt()); a.recycle(); return c
     }
 
-    /** Show "Connecting…", wake the Tailscale path with a health check, then load the dashboard. */
+    private var failed = false
+
+    /** Load the dashboard (a loading screen shows until the first page is drawn). */
     private fun connect() {
-        val my = ++attempt
+        failed = false
         connectingView.visibility = View.VISIBLE
         spinner.visibility = View.VISIBLE
         retry.visibility = View.GONE
-        message.text = "Connecting to your server…"
-        Thread {
-            val deadline = System.currentTimeMillis() + 20_000
-            var ok = false
-            while (!ok && System.currentTimeMillis() < deadline && my == attempt) {
-                ok = try {
-                    val c = URL(prefs.dashboardUrl.trimEnd('/') + "/_stcore/health").openConnection() as HttpURLConnection
-                    c.connectTimeout = 5_000; c.readTimeout = 5_000
-                    try { c.responseCode == 200 } finally { c.disconnect() }
-                } catch (e: Exception) {
-                    Thread.sleep(1_000); false
-                }
-            }
-            runOnUiThread {
-                if (my != attempt) return@runOnUiThread
-                if (ok) web.loadUrl(prefs.dashboardUrl) else showProblem("Can't reach your server.")
-            }
-        }.start()
+        message.text = "Opening your dashboard…"
+        web.loadUrl(prefs.dashboardUrl)
     }
 
     private fun showProblem(what: String) {
@@ -158,15 +141,17 @@ class MainActivity : Activity() {
         message.text = "$what\n\nIs Tailscale on and connected on this phone?"
     }
 
+    // Tell the page when the app goes to the background and comes back: it then refreshes your data and checks
+    // for a newer version of itself on its own (no reload needed).
     override fun onPause() {
         super.onPause()
-        pausedAt = System.currentTimeMillis()
+        web.onPause()
     }
 
     override fun onResume() {
         super.onResume()
-        // after a while in the background the dashboard's live connection is gone: reconnect cleanly
-        if (pausedAt > 0 && System.currentTimeMillis() - pausedAt > 120_000) connect()
+        web.onResume()
+        if (failed) connect()  // it never loaded: try again now that we're back
     }
 
     @Deprecated("Activity back handling")

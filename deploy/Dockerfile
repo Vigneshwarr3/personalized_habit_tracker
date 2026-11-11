@@ -6,7 +6,7 @@ RUN npm ci --no-audit --no-fund
 COPY web ./
 RUN npm run build
 
-# 2) the API (also serves the web app at /ui/) + the Streamlit dashboard (until every page has moved)
+# 2) the API (also serves the web app at /ui/)
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
@@ -18,7 +18,6 @@ COPY requirements-server.txt .
 RUN pip install -r requirements-server.txt
 
 COPY server ./server
-COPY dashboard ./dashboard
 COPY --from=web /web/dist ./web/dist
 
 # uid 1000 = the host user that owns ./data (user)

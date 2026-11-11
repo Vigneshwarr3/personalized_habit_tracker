@@ -1,8 +1,9 @@
 # Run from the repo root on the server:
 #   docker compose -f deploy/docker-compose.yml up -d --build
-# Both services listen on 127.0.0.1 only. `tailscale serve` publishes them to the tailnet (never Funnel):
-#   https://your-server.your-tailnet.ts.net:8765  -> api
-#   https://your-server.your-tailnet.ts.net:8501  -> dashboard
+# The API listens on 127.0.0.1 only and also serves the web app at /ui/. `tailscale serve` publishes it to the
+# tailnet (never Funnel):
+#   https://your-server.your-tailnet.ts.net:8765      -> api (web app at /ui/)
+#   https://your-server.your-tailnet.ts.net:8501      -> same (the old dashboard address, so old links keep working)
 name: habit-tracker
 
 services:
@@ -26,20 +27,3 @@ services:
       interval: 60s
       timeout: 5s
       retries: 3
-
-  dashboard:
-    image: habit-tracker:latest
-    pull_policy: never          # same image the api service builds
-    depends_on: [api]
-    working_dir: /app/dashboard
-    command: ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "8501",
-              "--server.headless", "true", "--browser.gatherUsageStats", "false",
-              "--server.fileWatcherType", "none", "--client.toolbarMode", "minimal"]
-    env_file: ../.env
-    environment:
-      HT_API_URL: http://api:8765
-      HT_APK_PATH: /app/dist/habit-tracker.apk
-    volumes:
-      - ../dist:/app/dist:ro                    # Android app offered for download on Privacy & devices
-    ports: ["127.0.0.1:18501:8501"]
-    restart: unless-stopped
