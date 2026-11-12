@@ -213,19 +213,19 @@ To rebuild the app (the SDK was installed with Homebrew):
 **Activities › Sub-activities**: everything is filed under 11 activities:
 - Watching, Learning, Project, Everyday activities, Travel, Sleep, Exercise, Unproductive, Work, Career, Friends/Family.
 - Each activity has a color, and its sub-activities get shades of it. Change any color on **Categories**; sub-activities you haven't recolored follow their activity.
-- The heatmap is colored by activity. The pie shows activities; tap a slice for its sub-activities.
+- The heatmap is colored by activity. The pie shows activities, each slice labelled with its name and share (outside, with a line, when it doesn't fit; slices under 3% have no label). Hover a slice for its total, average per day (over the days in the range that have tracked data) and top 3 sub-activities; click it for its full breakdown ("← All activities" goes back). On a phone: tap once for the details, tap again for the breakdown.
 - Categories from before activities stay as they were until you use **Categories → Move old categories**. Nothing is deleted, and moves can be undone.
 - **Sessions** (Settings): watching for 2 h or more in one go counts as Unproductive › Binge watching. Social media or short videos for 30 min or more in one go count as Doom scrolling. The whole session counts, and labels always win.
 - **Places** (Corrections → Places this day): name a place and choose what time there counts as. Places with the same name share the tag. **Open in OpenStreetMap** shows the spot. **Suggest a name** asks OpenStreetMap, sending only that place's rounded coordinates, and only when you press it.
 
 **Look**: the Inter font, a graphite accent, and light/dark following your device, set as color tokens in `web/src/index.css`. On wide screens the page links sit on the right of the header; on phones they're under ☰. In the Android app they're under ☰, together with **App settings & sync**.
 
-- **Overview**: hour × day heatmap (rows are hours, columns are dates, each cell is the category that took most of that hour; hover for the 15-min breakdown), plus a pie chart with "N Hours of Category, X%" labels.
+- **Overview**: hour × day heatmap (rows are hours, columns are dates, each cell is the category that took most of that hour; hover for the 15-min breakdown), plus the activity pie chart.
 - **Filling in time** (three ways, all saved as labels that override tracking):
   - **Paint** on the Overview heatmap: drag a box over hours (Mac) or tap an hour (phone), pick a category, and press **Paint**.
   - The Corrections **Day table** lists all 96 blocks of the day, including empty ones. Tick several rows and **Apply** one category.
   - Corrections **Quick fill**: *Fill all empty blocks* of the day, *Set 00:00–08:00*, or any custom range.
-- **Settings**: show or hide each Overview card (Top 3, change vs previous period, group totals, time to cut, day coverage, phone vs laptop, longest focus, streak). Also: edit the category groups, choose which group is "time to cut", set the streak rule (default Learning ≥ 2 h/day), and choose which groups or categories count as focus. These are saved on the server, so they're the same on every device.
+- **Settings**: show or hide each Overview card (Top 3, change vs previous period, group totals, time to cut, day coverage, phone vs laptop, longest focus, streak), and the color legends under the heatmap and pie (off by default). Also: edit the category groups, choose which group is "time to cut", set the streak rule (default Learning ≥ 2 h/day), and choose which groups or categories count as focus. These are saved on the server, so they're the same on every device.
 - **Corrections**: every 15-min window of a day with its category, the routine that chose it, and its top apps/titles. Change the category in the table and press **Save**, or label any time range by hand, including hours with no data. Corrections always win and are kept as training data. **Undo** deactivates a label; it isn't deleted.
 - **Categories**: add, rename, recolor, archive, merge, unmerge. A rename keeps the old name as an alias, so YAML that uses it keeps working. A merge is a pointer that's resolved when data is read, so history is never rewritten.
 - **Privacy & devices**: pause tracking, hide or un-hide a date range, create or revoke device tokens, storage stats, back up now.

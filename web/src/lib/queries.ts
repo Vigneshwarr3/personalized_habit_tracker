@@ -141,6 +141,7 @@ export interface UiSettings {
   focus: { activities: number[]; categories: number[] }
   sessions: { binge_hours: number; doom_minutes: number }
   location: { travel_km: number; precision: "100m" | "1km"; radius_m: number; autofill_places: boolean }
+  show_legends: boolean
 }
 export const useUiSettings = () => useQuery({ queryKey: ["ui-settings"], queryFn: () => api.get<UiSettings>("/ui-settings") })
 

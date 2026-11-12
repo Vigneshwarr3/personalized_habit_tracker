@@ -69,7 +69,7 @@ function SettingsForm({ ui, acts, labelable }: { ui: UiSettings; acts: Category[
     <form className="space-y-8" onSubmit={(e) => {
       e.preventDefault()
       const body = {
-        cards: v.cards, time_to_cut_activity: v.time_to_cut_activity,
+        cards: v.cards, time_to_cut_activity: v.time_to_cut_activity, show_legends: v.show_legends,
         streak: v.streak, sessions: v.sessions, location: v.location,
         focus: { activities: v.focus.activities.filter((a) => actIds.has(a)), categories: v.focus.categories.filter((c) => labelIds.has(c)) },
       }
@@ -86,6 +86,13 @@ function SettingsForm({ ui, acts, labelable }: { ui: UiSettings; acts: Category[
               {label}
             </label>
           ))}
+        </div>
+      </Section>
+
+      <Section title="Overview charts">
+        <div className="flex min-h-10 items-center gap-2">
+          <Switch id="legends" checked={v.show_legends} onCheckedChange={(on) => up({ show_legends: on })} />
+          <Label htmlFor="legends">Show color legends under the heatmap and the pie chart</Label>
         </div>
       </Section>
 

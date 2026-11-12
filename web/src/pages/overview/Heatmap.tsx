@@ -18,7 +18,7 @@ import {
 const MAX_ROUNDED_DAYS = 45 // beyond this, plain squares (hundreds of rounded shapes get slow)
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
-export function Heatmap({ data, today, tz }: { data: Dashboard; today: string; tz: string }) {
+export function Heatmap({ data, today, tz, showLegend }: { data: Dashboard; today: string; tz: string; showLegend: boolean }) {
   const narrow = useIsNarrow()
   const touch = useIsTouch()
   const dark = useIsDark()
@@ -129,7 +129,7 @@ export function Heatmap({ data, today, tz }: { data: Dashboard; today: string; t
         }}
       />
       <PaintPanel picked={picked} tz={tz} onDone={() => setPicked(new Set())} touch={touch} />
-      {present.length > 0 && (
+      {showLegend && present.length > 0 && (
         <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm" aria-label="Categories in view">
           {present.map(([name, color]) => (
             <li key={name} className="inline-flex items-center gap-1.5">

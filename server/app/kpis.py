@@ -57,6 +57,7 @@ class UISettings(BaseModel):
     focus: FocusRule = FocusRule()
     location: LocationSettings = LocationSettings()
     sessions: SessionRules = SessionRules()
+    show_legends: bool = False                             # color legends under the Overview heatmap and pie
 
 
 def _activity_id(conn, name: str) -> int | None:
@@ -87,6 +88,7 @@ def load_ui(conn) -> dict:
     ui["cards"] = {k: bool(ui.get("cards", {}).get(k, True)) for k in CARD_KEYS}  # new cards default to on
     ui["location"] = LocationSettings(**(ui.get("location") or {})).model_dump()
     ui["sessions"] = SessionRules(**(ui.get("sessions") or {})).model_dump()
+    ui["show_legends"] = bool(ui.get("show_legends", False))  # settings saved before this switch: legends off
     return ui
 
 

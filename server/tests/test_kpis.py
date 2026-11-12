@@ -37,6 +37,23 @@ def test_ui_settings_defaults_and_validation(client):
     assert client.get("/ui-settings").json()["streak"]["activity"] == learning
 
 
+
+def test_show_legends_switch(client, cfg):
+    """Legends under the Overview heatmap and pie: off by default, one switch, kept like the other settings."""
+    ui = client.get("/ui-settings").json()
+    assert ui["show_legends"] is False
+    assert client.put("/ui-settings", json=dict(ui, show_legends=True)).status_code == 200
+    assert client.get("/ui-settings").json()["show_legends"] is True
+    # settings saved before the switch existed come back with legends off
+    import json, sqlite3
+    conn = sqlite3.connect(cfg.db_path)
+    stored = json.loads(conn.execute("SELECT value FROM settings_kv WHERE key='ui'").fetchone()[0])
+    stored.pop("show_legends")
+    conn.execute("UPDATE settings_kv SET value=? WHERE key='ui'", (json.dumps(stored),))
+    conn.commit(); conn.close()
+    assert client.get("/ui-settings").json()["show_legends"] is False
+
+
 def test_kpis_cards(client, cfg):
     days = [(date(2026, 11, 1) + timedelta(days=i)).isoformat() for i in range(6)]  # Nov 1..6
     for i, d in enumerate(days):

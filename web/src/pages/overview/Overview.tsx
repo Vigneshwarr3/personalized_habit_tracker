@@ -4,12 +4,13 @@ import { PauseCircle } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useDashboard, useKpis, useStatus } from "@/lib/queries"
+import { useDashboard, useKpis, useStatus, useUiSettings } from "@/lib/queries"
 import { fmtRange, todayIn } from "@/lib/time"
 import { PRESETS, rangeFor } from "./range"
 import { Cards } from "./Cards"
 import { Heatmap } from "./Heatmap"
 import { ActivityPie } from "./ActivityPie"
+import { daysTracked } from "./activity"
 
 export function Overview() {
   const [params, setParams] = useSearchParams()
@@ -20,6 +21,7 @@ export function Overview() {
   const range = today ? rangeFor(preset, today, params.get("start"), params.get("end")) : undefined
   const dash = useDashboard(range)
   const kpis = useKpis(range)
+  const showLegends = useUiSettings().data?.show_legends ?? false
 
   const set = (next: Record<string, string>) => setParams(next, { replace: true })
 
@@ -73,11 +75,11 @@ export function Overview() {
       <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
         <section aria-labelledby="hm-title">
           <h2 id="hm-title" className="mb-2 text-lg font-semibold">Hour by day</h2>
-          {dash.data && today ? <Heatmap data={dash.data} today={today} tz={tz!} /> : <Skeleton className="h-[600px] w-full" />}
+          {dash.data && today ? <Heatmap data={dash.data} today={today} tz={tz!} showLegend={showLegends} /> : <Skeleton className="h-[600px] w-full" />}
         </section>
         <section aria-labelledby="pie-title">
           <h2 id="pie-title" className="mb-2 text-lg font-semibold">Hours per activity</h2>
-          {dash.data ? <ActivityPie rows={dash.data.summary.categories} /> : <Skeleton className="h-80 w-full" />}
+          {dash.data ? <ActivityPie rows={dash.data.summary.categories} days={daysTracked(dash.data.heatmap)} showLegend={showLegends} /> : <Skeleton className="h-80 w-full" />}
         </section>
       </div>
     </div>
